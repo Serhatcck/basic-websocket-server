@@ -23,7 +23,7 @@ class SocketEx:
     def handleConnection(self, conn, addr):
         print("")
         print('Connected to: ' + addr[0] + ':' + str(addr[1]))
-        # handshake in tamamlanması için gereken HTTP 101 yanıtı döndürülür
+        #The HTTP 101 response required to complete the handshake is returned
         self.endHandshake(conn)
        
         print("Handshake Finished: "+str(addr[1]))
@@ -32,14 +32,14 @@ class SocketEx:
 
         #sleep(1)
         self.sendData(conn,"Welcome")
-        # socket sonsuza kadar dinlenir.
+        # socket listen forever.
         while True:
-            # data alınır.
+            # data is received
             data = self.recvData(conn)
             if data:
                 print("received from: "+addr[0] +
                     " / received data: [%s]" % (data))
-                # veri gönderilir
+                # data is sent
                 data = "Your Message:"+data
                 self.sendData(conn,data)
         
@@ -58,7 +58,7 @@ class SocketEx:
     def recvData(self, conn):
         data = bytearray(conn.recv(10240))
         if data:
-            # gelen data websocket çerrçeve yapısına göre ayrıştırılır
+            # Incoming data is parsed according to the websocket frame structure.
             assert(0x1 == (0xFF & data[0]) >> 7)
             # data must be a text frame
             # 0x8 (close connection) is handled with assertion failure
@@ -69,7 +69,7 @@ class SocketEx:
             datalen = (0x7F & data[1])
             stringData = ''
             if(datalen > 0):
-                # maskelenmiş veri çözümlenir.
+                # The masked data is parsed.
                 mask_key = data[2:6]
                 masked_data = data[6:(6+datalen)]
                 unmasked_data = [masked_data[i] ^ mask_key[i % 4]
@@ -81,12 +81,12 @@ class SocketEx:
     def endHandshake(self, conn):
         data = conn.recv(1024)
         data = data.decode('utf-8')
-        # gelen istekteki HTTP header ları ayrıştırılır
+        #HTTP headers in the incoming request are parsed
         headers = self.splitHeaders(data)
     
-        # "Sec-WebSocket-Accept" değeri ile birlikte yanıt edilir
+        # Response with value "Sec-WebSocket-Accept"
         respData = self.calcSecWebSocketAccept(headers["Sec-WebSocket-Key"])
-        # yanıt socket üzerinden gönderilir
+        # response sent over socket
         print(respData)
         conn.send(str.encode(respData))
 
@@ -95,18 +95,18 @@ class SocketEx:
 
     def calcSecWebSocketAccept(self, key):
         key = key + self.GUID
-        # istete gelen değer GUID ile birleştiril sha1 karması alınır. Hexe dönüştürülür ve base64 kodlanır
+        # The value from the request is combined with the GUID to get the sha1 hash. Converted to hex and base64 encoded
         respKey = base64.standard_b64encode(
             hashlib.sha1(key.encode('utf-8')).digest())
         respData = self.UPGRADE_RESP % respKey.decode('utf-8')
         return respData
 
     def splitHeaders(self, data):
-        # Başlıklar satır satır bölünür
+        # Headings are split line by line
         headers = data.split("\r\n")
         headerDict = {}
         for h in headers:
-            # her satır : göre ayrıştırılır
+            # each line is parsed by ":"
             parseHeader = h.split(":")
             if len(parseHeader) > 1:
                 headerDict[str(parseHeader[0]).strip()] = str(
@@ -116,7 +116,7 @@ class SocketEx:
  
 
     def startServer(self, host, port):
-        # server ayağa kaldırılır
+        # server is up
         serverSocket = socket.socket()
         serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -124,12 +124,12 @@ class SocketEx:
         except socket.error as e:
             print(str(e))
         print(f'Server is listing on the port {port}...')
-        # en fazla 10 bağlantı alınabileceği bildirilir
+        # up to 10 connections are received
         serverSocket.listen(10)
         while True:
-            # istek kabul edilir
+            #request accepted
             conn, addr = serverSocket.accept()
-            # kabul edilen istek bir thread içinde handleConnection fonksiyonuna gönderilir
+            # accepted request is sent to handleConnection function in a thread
             threading.Thread(target=self.handleConnection,
                              args=(conn, addr)).start()
 
