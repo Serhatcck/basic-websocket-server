@@ -1,0 +1,30 @@
+<html>
+
+<body>
+    <div id="root"></div>
+    <script>
+        var host = 'ws://localhost:8585';
+        var socket = new WebSocket(host);
+        socket.onmessage = function (e) {
+            document.getElementById('root').innerHTML = e.data;
+        };
+
+
+        function sendMessage(){
+            var textarea = document.getElementById('messages')
+            message = textarea.value.trim()
+
+            socket.send(message)
+        }
+
+    </script>
+
+    
+    <br>
+    <textarea id="messages">
+
+    </textarea>
+    <button onclick="sendMessage()">Send Message</button>
+</body>
+
+</html>
